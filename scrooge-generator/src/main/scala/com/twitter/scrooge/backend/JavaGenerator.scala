@@ -167,7 +167,7 @@ class JavaGenerator(
    */
   def toMutable(t: FieldType): (String, String) = {
     t match {
-      case MapType(_, _, _) | SetType(_, _) => (genType(t, true).toData + "() ++= ", "")
+      case MapType(_, _, _) | SetType(_, _) => (genType(t, None, true).toData + "() ++= ", "")
       case ListType(_, _) => ("", ".toBuffer")
       case _ => ("", "")
     }
@@ -199,14 +199,7 @@ class JavaGenerator(
     codify(code)
   }
 
-  override def genConstant(constant: RHS, mutable: Boolean = false, fieldType: Option[FieldType] = None): CodeFragment = {
-    (constant, fieldType) match {
-      case (IntLiteral(value), Some(TI64)) => codify(value.toString + "L")
-      case _ => super.genConstant(constant, mutable, fieldType)
-    }
-  }
-
-  def genType(t: FunctionType, mutable: Boolean = false): CodeFragment = {
+  def genType(t: FunctionType, namespace: Option[Identifier] = None, mutable: Boolean = false): CodeFragment = {
     val code = t match {
       case Void => "Void"
       case OnewayVoid => "Void"
@@ -237,14 +230,14 @@ class JavaGenerator(
       case TI32 => "int"
       case TI64 => "long"
       case TDouble => "double"
-      case _ => genType(t, mutable).toData
+      case _ => genType(t, None, mutable).toData
     }
     codify(code)
   }
 
-  def genFieldType(f: Field, mutable: Boolean = false): CodeFragment = {
+  def genFieldType(f: Field, namespace: Option[Identifier] = None, mutable: Boolean = false): CodeFragment = {
     val code = if (f.requiredness.isOptional) {
-      val baseType = genType(f.fieldType, mutable).toData
+      val baseType = genType(f.fieldType, namespace, mutable).toData
       "com.twitter.scrooge.Option<" + baseType + ">"
     } else {
       genPrimitiveType(f.fieldType).toData
@@ -252,7 +245,7 @@ class JavaGenerator(
     codify(code)
   }
 
-  def genFieldParams(fields: Seq[Field], asVal: Boolean = false): CodeFragment = {
+  def genFieldParams(fields: Seq[Field], namespace: Option[Identifier] = None, asVal: Boolean = false): CodeFragment = {
     val code = fields.map {
       f =>
         genFieldType(f).toData + " " + genID(f.sid).toData

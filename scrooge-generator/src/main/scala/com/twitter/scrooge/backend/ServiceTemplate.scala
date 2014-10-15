@@ -19,9 +19,10 @@ package com.twitter.scrooge.backend
 import com.twitter.scrooge.ast._
 import com.twitter.scrooge.mustache.Dictionary
 import com.twitter.scrooge.mustache.Dictionary._
+import java.io.File
 
 trait ServiceTemplate { self: TemplateGenerator =>
-  def toDictionary(function: Function, generic: Option[String]): Dictionary = {
+  def toDictionary(function: Function, namespace: Option[Identifier], generic: Option[String]): Dictionary = {
     val hasThrows = generic.isEmpty && function.throws.size > 0
     val throwsDictionaries =
       if (hasThrows) {
@@ -39,7 +40,8 @@ trait ServiceTemplate { self: TemplateGenerator =>
       "throws" -> v(throwsDictionaries),
       "funcName" -> genID(function.funcName.toCamelCase),
       "typeName" -> genType(function.funcType),
-      "fieldParams" -> genFieldParams(function.args)
+      "fullTypeName" -> genType(function.funcType, namespace),
+      "fieldParams" -> genFieldParams(function.args, namespace)
     )
   }
 
@@ -97,7 +99,7 @@ trait ServiceTemplate { self: TemplateGenerator =>
         f =>
           Dictionary(
             "header" -> v(templates("function")),
-            "headerInfo" -> v(toDictionary(f, Some("Future"))),
+            "headerInfo" -> v(toDictionary(f, Option(namespace), Some("Future"))),
             "clientFuncNameForWire" -> codify(f.originalName),
             "__stats_name" -> genID(f.funcName.toCamelCase.prepend("__stats_")),
             "type" -> genType(f.funcType),
@@ -177,13 +179,13 @@ trait ServiceTemplate { self: TemplateGenerator =>
         genID(getServiceParentID(p)).append("[MM]")
       }.getOrElse(codify("ThriftService")),
       "syncFunctions" -> v(service.functions.map {
-        f => toDictionary(f, None)
+        f => toDictionary(f, Option(namespace), None)
       }),
       "asyncFunctions" -> v(service.functions.map {
-        f => toDictionary(f, Some("Future"))
+        f => toDictionary(f, Option(namespace), Some("Future"))
       }),
       "genericFunctions" -> v(service.functions.map {
-        f => toDictionary(f, Some("MM"))
+        f => toDictionary(f, Option(namespace), Some("MM"))
       }),
       "struct" -> v(templates("struct")),
       "internalStructs" -> v(service.functions.map { f =>
@@ -202,7 +204,8 @@ trait ServiceTemplate { self: TemplateGenerator =>
       "finagleServices" -> v(
         if (withFinagle) Seq(finagleService(service, namespace)) else Seq()
       ),
-      "withFinagle" -> v(withFinagle)
+      "withFinagle" -> v(withFinagle),
+      "workingDir" -> codify(new File(".").getCanonicalPath())
     )
   }
 }

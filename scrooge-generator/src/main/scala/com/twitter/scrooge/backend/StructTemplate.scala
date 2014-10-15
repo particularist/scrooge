@@ -20,6 +20,7 @@ import com.twitter.scrooge.ast._
 import com.twitter.scrooge.mustache.Dictionary
 import com.twitter.scrooge.mustache.Dictionary._
 import com.twitter.scrooge.frontend.ScroogeInternalException
+import java.io.File
 
 trait StructTemplate { self: TemplateGenerator =>
 
@@ -105,7 +106,7 @@ trait StructTemplate { self: TemplateGenerator =>
     }
   }
 
-  def fieldsToDict(fields: Seq[Field], blacklist: Seq[String]) = {
+  def fieldsToDict(fields: Seq[Field], namespace: Option[Identifier], blacklist: Seq[String]) = {
     fields.zipWithIndex map {
       case (field, index) =>
         val valueVariableID = field.sid.append("_item")
@@ -113,6 +114,7 @@ trait StructTemplate { self: TemplateGenerator =>
           "index" -> codify(index.toString),
           "indexP1" -> codify((index + 1).toString),
           "_fieldName" -> genID(field.sid.prepend("_")), // for Java only
+          "fieldDoc" -> codify(field.comment.getOrElse("")),
           "unsetName" -> genID(field.sid.toTitleCase.prepend("unset")),
           "readName" -> genID(field.sid.toTitleCase.prepend("read")),
           "getBlobName" -> genID(field.sid.toTitleCase.prepend("get").append("Blob")),
@@ -131,6 +133,7 @@ trait StructTemplate { self: TemplateGenerator =>
           "isPrimitive" -> v(isPrimitive(field.fieldType)),
           "primitiveFieldType" -> genPrimitiveType(field.fieldType, mutable = false),
           "fieldType" -> genType(field.fieldType, mutable = false),
+          "fullFieldType" -> genFieldType(field, namespace, mutable = false),
           "fieldKeyType" -> v(field.fieldType match {
             case MapType(keyType, _, _) => Some(genType(keyType))
             case _ => None
@@ -210,7 +213,8 @@ trait StructTemplate { self: TemplateGenerator =>
                 "suffix" -> codify(suffix)))
             }
           },
-          "valueVariableName" -> genID(valueVariableID)
+          "valueVariableName" -> genID(valueVariableID),
+        "workingDir" -> codify(new File(".").getCanonicalPath())
         )
     }
   }
@@ -288,7 +292,7 @@ trait StructTemplate { self: TemplateGenerator =>
     val arity = struct.fields.size
     val product = if (arity >= 1 && arity <= 22) {
       val fieldTypes = struct.fields.map {
-        f => genFieldType(f).toData
+        f => genFieldType(f, namespace, false).toData
       }.mkString(", ")
       "scala.Product" + arity + "[" + fieldTypes + "]"
     } else {
@@ -298,7 +302,7 @@ trait StructTemplate { self: TemplateGenerator =>
     val exceptionMsgField: Option[SimpleID] = if (isException) exceptionMsgFieldName(struct) else None
 
     val fieldDictionaries = fieldsToDict(
-      struct.fields,
+      struct.fields, namespace,
       if (isException) Seq("message") else Seq())
 
     val isPublic = namespace.isDefined
@@ -310,7 +314,7 @@ trait StructTemplate { self: TemplateGenerator =>
       "docstring" -> codify(struct.docstring.getOrElse("")),
       "parentType" -> codify(parentType),
       "fields" -> v(fieldDictionaries),
-      "defaultFields" -> v(fieldsToDict(struct.fields.filter(!_.requiredness.isOptional), Seq())),
+      "defaultFields" -> v(fieldsToDict(struct.fields.filter(!_.requiredness.isOptional), namespace, Seq())),
       "alternativeConstructor" -> v(
         struct.fields.exists(_.requiredness.isOptional) && struct.fields.exists(_.requiredness.isDefault)),
       "StructNameForWire" -> codify(struct.originalName),
@@ -330,7 +334,8 @@ trait StructTemplate { self: TemplateGenerator =>
       "arityN" -> v(arity > 1 && arity <= 22),
       "withFieldGettersAndSetters" -> v(isStruct || isException),
       "withTrait" -> v(isStruct),
-      "structAnnotations" -> v(StructTemplate.renderPairs(struct.annotations))
+      "structAnnotations" -> v(StructTemplate.renderPairs(struct.annotations)),
+      "workingDir" -> codify(new File(".").getCanonicalPath())
     )
   }
 }

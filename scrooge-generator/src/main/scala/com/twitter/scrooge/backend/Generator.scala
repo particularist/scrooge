@@ -43,7 +43,7 @@ object GeneratorFactory {
   private[this] val factories: Map[String, GeneratorFactory] = {
     val loadedGenerators = LoadService[GeneratorFactory]()
     val factories =
-      List(JavaGeneratorFactory, ScalaGeneratorFactory, ApacheJavaGeneratorFactory) ++
+      List(JavaGeneratorFactory, ScalaGeneratorFactory, HtmlGeneratorFactory, ApacheJavaGeneratorFactory) ++
       loadedGenerators
 
     (factories map { g => (g.lang -> g) }).toMap
@@ -82,8 +82,19 @@ trait Generator extends ThriftGenerator {
   val experimentFlags: Seq[String]
 
   /******************** helper functions ************************/
+<<<<<<< HEAD
   protected def namespacedFolder(destFolder: File, namespace: String, dryRun: Boolean): File = {
     val file = new File(destFolder, namespace.replace('.', File.separatorChar))
+=======
+  private[this] def namespacedFolder(destFolder: File, namespace: String, dryRun: Boolean) = {
+
+    var file : File = null
+    if(this.isInstanceOf[HtmlGenerator]) {
+      file = new File(destFolder.getPath);
+    } else {
+      file = new File(destFolder, namespace.replace('.', File.separatorChar))
+    }
+>>>>>>> Added an html generator and included html template files.
     if (!dryRun) file.mkdirs()
     file
   }
@@ -147,8 +158,13 @@ trait Generator extends ThriftGenerator {
     val stream = new FileOutputStream(file)
     val writer = new OutputStreamWriter(stream, "UTF-8")
     try {
-      writer.write(fileHeader)
-      writer.write(fileContent)
+      if (this.isInstanceOf[HtmlGenerator]) {
+        writer.write(fileContent)
+      } else {
+        writer.write(fileHeader)
+        writer.write(fileContent)
+      }
+
     } finally {
       writer.close()
       stream.close()
@@ -245,9 +261,9 @@ trait Generator extends ThriftGenerator {
    * When a named type is imported via include statement, we need to
    * qualify it using its full namespace
    */
-  def qualifyNamedType(t: NamedType): Identifier =
+  def qualifyNamedType(t: NamedType, x: Boolean = false): Identifier =
     t.scopePrefix match {
-      case Some(scope) => t.sid.addScope(getIncludeNamespace(scope.name))
+      case Some(scope) => if(x) t.sid.addScope(getIncludeNamespace(scope.name)) else t.sid
       case None => t.sid
     }
 
@@ -293,13 +309,17 @@ trait Generator extends ThriftGenerator {
    */
   def genToImmutable(f: Field): CodeFragment
 
-  def genType(t: FunctionType, mutable: Boolean = false): CodeFragment
+  def processFileName(sid: SimpleID, namespace: Option[Identifier] = None):String = {
+    sid.toTitleCase.name
+  }
+
+  def genType(t: FunctionType, namespace: Option[Identifier] = None, mutable: Boolean = false): CodeFragment
 
   def genPrimitiveType(t: FunctionType, mutable: Boolean = false): CodeFragment
 
-  def genFieldType(f: Field, mutable: Boolean = false): CodeFragment
+  def genFieldType(f: Field, namespace: Option[Identifier], mutable: Boolean = false): CodeFragment
 
-  def genFieldParams(fields: Seq[Field], asVal: Boolean = false): CodeFragment
+  def genFieldParams(fields: Seq[Field], namespace: Option[Identifier], asVal: Boolean = false): CodeFragment
 
   def genBaseFinagleService: CodeFragment
 
@@ -352,7 +372,7 @@ trait TemplateGenerator extends Generator
 
     doc.enums.foreach {
       enum =>
-        val file = new File(packageDir, enum.sid.toTitleCase.name + fileExtension)
+        val file = new File(packageDir, processFileName(enum.sid, Option(namespace)) + fileExtension)
         if (!dryRun) {
           val dict = enumDict(namespace, enum)
           writeFile(file, templates.header, templates("enum").generate(dict))
@@ -362,7 +382,7 @@ trait TemplateGenerator extends Generator
 
     doc.structs.foreach {
       struct =>
-        val file = new File(packageDir, struct.sid.toTitleCase.name + fileExtension)
+        val file = new File(packageDir, processFileName(struct.sid, Option(namespace)) + fileExtension)
 
         if (!dryRun) {
           val templateName =
@@ -379,7 +399,7 @@ trait TemplateGenerator extends Generator
 
     doc.services.foreach {
       service =>
-        val interfaceFile = new File(packageDir, service.sid.toTitleCase.name + fileExtension)
+        val interfaceFile = new File(packageDir, processFileName(service.sid) + fileExtension)
         val finagleClientFileOpt = finagleClientFile(packageDir, service, serviceOptions)
         val finagleServiceFileOpt = finagleServiceFile(packageDir, service, serviceOptions)
 
