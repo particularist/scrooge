@@ -19,51 +19,44 @@ package com.twitter.scrooge.backend
 import com.twitter.scrooge.ast._
 import com.twitter.scrooge.frontend.{ScroogeInternalException, ResolvedDocument}
 import com.twitter.scrooge.mustache.Dictionary._
-import com.twitter.scrooge.mustache.HandlebarLoader
 import java.io.File
+import org.apache.commons.lang.StringEscapeUtils.escapeHtml
 
-object ScalaGeneratorFactory extends GeneratorFactory {
-  val lang = "scala"
-  val handlebarLoader = new HandlebarLoader("/scalagen/", ".scala")
+object HtmlGeneratorFactory extends GeneratorFactory {
+  val lang = "html"
+
   def apply(
-    includeMap: Map[String, ResolvedDocument],
-    defaultNamespace: String,
-    experimentFlags: Seq[String]
-  ): ThriftGenerator = new ScalaGenerator(
-    includeMap,
-    defaultNamespace,
-    experimentFlags,
-    handlebarLoader)
+             includeMap: Map[String, ResolvedDocument],
+             defaultNamespace: String,
+             experimentFlags: Seq[String]
+             ): ThriftGenerator = new HtmlGenerator(includeMap, defaultNamespace, experimentFlags)
 }
 
-class ScalaGenerator(
-  val includeMap: Map[String, ResolvedDocument],
-  val defaultNamespace: String,
-  val experimentFlags: Seq[String],
-  val templatesLoader: HandlebarLoader
-) extends TemplateGenerator {
-  def templates: HandlebarLoader = templatesLoader
+class HtmlGenerator(
+                     val includeMap: Map[String, ResolvedDocument],
+                     val defaultNamespace: String,
+                     val experimentFlags: Seq[String]
+                     ) extends Generator with ThriftGenerator {
 
-  val fileExtension = ".scala"
+  val fileExtension = ".html"
+  val templateDirName = "/htmlgen/"
 
   var warnOnJavaNamespaceFallback: Boolean = false
 
-  private object ScalaKeywords {
-    private[this] val set = Set[String](
-      "abstract", "case", "catch", "class", "def", "do", "else", "extends",
-      "false", "final", "finally", "for", "forSome", "if", "implicit", "import",
-      "lazy", "match", "new", "null", "object", "override", "package", "private",
-      "protected", "return", "sealed", "super", "this", "throw", "trait", "try",
-      "true", "type", "val", "var", "while", "with", "yield")
-    def contains(str: String): Boolean = set.contains(str)
+  //TODO Need to revise this method for HTML
+  // Quote HTML reserved words in ``
+  def quoteKeyword(str: String): String =
+       escapeHtml(str)
+
+  def processComment(comment: String): String = {
+      comment.replaceAll("/\\*\\*|\\*/|\\s\\*\\s", " ")
+        .replaceFirst("@param\\s([a-zA-Z]*)\\s","<br><b>Parameters</b><br> - <i>$1<\\/i> ")
+        .replaceAll("@param\\s([a-zA-Z]*)\\s","<br> - <i>$1<\\/i> ")
+        .replaceAll("@code\\s([a-zA-Z]*)\\s", "<code>$1</code>")
+        .replaceAll("@return\\s(.*)\\n", "<p> <b> Returns: <\\/b> <i>$1<\\/i><br>")
+        .replaceAll("\\{\\s*@link\\s*[[a-z][\\.]]*([a-zA-Z]*)\\s*[a-zA-Z]*\\}", "<b><i>$1</i></b>")
   }
 
-  // Quote Scala reserved words in ``
-  def quoteKeyword(str: String): String =
-    if (ScalaKeywords.contains(str))
-      "`" + str + "`"
-    else
-      str
 
   def normalizeCase[N <: Node](node: N) = {
     (node match {
@@ -75,19 +68,25 @@ class ScalaGenerator(
       case f: Field =>
         f.copy(
           sid = f.sid.toCamelCase,
+          comment = f.comment match { case Some(x) => Some(processComment(x)) case None=> Some("")},
           default = f.default.map(normalizeCase(_)))
       case f: Function =>
         f.copy(
           args = f.args.map(normalizeCase(_)),
+          docstring = f.docstring match { case Some(x) => Some(processComment(x)) case None=> Some("")},
           throws = f.throws.map(normalizeCase(_)))
       case c: ConstDefinition =>
         c.copy(value = normalizeCase(c.value))
       case e: Enum =>
-        e.copy(values = e.values.map(normalizeCase(_)))
+        e.copy(values = e.values.map(normalizeCase(_)),
+               docstring = e.docstring match { case Some(x) => Some(processComment(x)) case None=> Some("")})
       case e: EnumField =>
-        e.copy(sid = e.sid.toTitleCase)
+        e.copy(sid = e.sid.toTitleCase,
+               docstring = e.docstring match { case Some(x) => Some(processComment(x)) case None=> Some("")})
       case s: Struct =>
-        s.copy(fields = s.fields.map(normalizeCase(_)))
+        s.copy(fields = s.fields.map(normalizeCase(_)),
+          docstring = s.docstring match { case Some(x) => Some(processComment(x)) case None=> Some("")}
+          )
       case f: FunctionArgs =>
         f.copy(fields = f.fields.map(normalizeCase(_)))
       case f: FunctionResult =>
@@ -107,69 +106,51 @@ class ScalaGenerator(
         println("falling back to the java namespace. this will soon be deprecated")
       ns
     }
-
-  override protected def getIncludeNamespace(includeFileName: String): Identifier = {
-    val javaNamespace = includeMap.get(includeFileName).flatMap {
-      doc: ResolvedDocument => getNamespaceWithWarning(doc.document)
-    }
-    javaNamespace.getOrElse(SimpleID(defaultNamespace))
+  // methods that convert AST nodes to CodeFragment
+  override def genID(data: Identifier): CodeFragment = data match {
+    case SimpleID(name) => codify(quoteKeyword(name) )
+    case QualifiedID(names) => codify(names.map { quoteKeyword(_) }.mkString("/"))
   }
 
   override def getNamespace(doc: Document): Identifier =
     getNamespaceWithWarning(doc) getOrElse (SimpleID(defaultNamespace))
 
   def genList(list: ListRHS, mutable: Boolean = false): CodeFragment = {
-    val code = (if (mutable) "mutable.Buffer(" else "Seq(") +
-      list.elems.map(genConstant(_).toData).mkString(", ") + ")"
+    val code = "["+
+      list.elems.map(genConstant(_).toData).mkString(", ") + "]"
     codify(code)
   }
 
   def genSet(set: SetRHS, mutable: Boolean = false): CodeFragment = {
-    val code = (if (mutable) "mutable.Set(" else "Set(") +
-      set.elems.map(genConstant(_).toData).mkString(", ") + ")"
+    val code = "["+
+      set.elems.map(genConstant(_).toData).mkString(", ") + "]"
     codify(code)
   }
 
   def genMap(map: MapRHS, mutable: Boolean = false): CodeFragment = {
-    val code = (if (mutable) "mutable.Map(" else "Map(") + (map.elems.map {
+    val code = "{"+ (map.elems.map {
       case (k, v) =>
         genConstant(k).toData + " -> " + genConstant(v).toData
-    } mkString (", ")) + ")"
+    } mkString (", ")) + "}"
     codify(code)
   }
 
   def genEnum(enum: EnumRHS, fieldType: Option[FieldType] = None): CodeFragment = {
     def getTypeId: Identifier = fieldType.getOrElse(Void) match {
       case n: NamedType => qualifyNamedType(n)
-      case _ =>  enum.enum.sid
+      case _ => enum.enum.sid
     }
     genID(enum.value.sid.toTitleCase.addScope(getTypeId.toTitleCase))
-  }
-
-  def genStruct(struct: StructRHS): CodeFragment = {
-    val values = struct.elems
-    val fields = values map { case (f, value) =>
-      val v = genConstant(value)
-      genID(f.sid.toCamelCase) + "=" + (if (f.requiredness.isOptional) "Some(" + v + ")" else v)
-    }
-    codify(genID(struct.sid) + "(" + fields.mkString(", ") + ")")
   }
 
   override def genDefaultValue(fieldType: FieldType, mutable: Boolean = false): CodeFragment = {
     val code = fieldType match {
       case TI64 => "0L"
       case MapType(_, _, _) | SetType(_, _) | ListType(_, _) =>
-        genType(fieldType, None, mutable).toData + "()"
+        genType(fieldType, None ,mutable).toData + "()"
       case _ => super.genDefaultValue(fieldType, mutable).toData
     }
     codify(code)
-  }
-
-  override def genConstant(constant: RHS, mutable: Boolean = false, fieldType: Option[FieldType] = None): CodeFragment = {
-    (constant, fieldType) match {
-      case (IntLiteral(value), Some(TI64)) => codify(value.toString + "L")
-      case _ => super.genConstant(constant, mutable, fieldType)
-    }
   }
 
   /**
@@ -229,10 +210,38 @@ class ScalaGenerator(
     }
   }
 
-  def genType(t: FunctionType, namespace: Option[Identifier] = None, mutable: Boolean = false): CodeFragment = {
+  override def processFileName(sid: SimpleID, namespace: Option[Identifier]):String =
+   namespace match {
+      case Some(n) => genID(n).toData.replaceAll("/","_")+"_"+sid.toTitleCase.name
+      case None => sid.toTitleCase.name
+  }
+
+  def genLinksForNamedTypes(namespace: Option[Identifier], t: FunctionType):String = {
+    val workingDir = new File(".").getCanonicalPath
+    val linkDisplay = namespace match {
+      case Some(n) => genID(n).toData
+      case None => ""
+    }
+
+    val link = t match {
+      case n: NamedType => if(isPrimitive(t)){
+        genID(qualifyNamedType(n).toTitleCase).toData
+      }else{
+        val struct: CodeFragment = genID(qualifyNamedType(n, true).toTitleCase)
+        "<a href=\"" + (if( !n.scopePrefix.isDefined ) linkDisplay.replaceAll("/","_") + "_" else "" )+
+          struct.toData.replaceAll("/","_")+".html\">"+
+          genID(qualifyNamedType(n).toTitleCase)+"</a>"
+      }
+      case _ => ""
+    }
+    link
+  }
+
+  //TODO Consider adding link generation here. Perhaps around the named type case?
+  def genType(t: FunctionType, namespace: Option[Identifier], mutable: Boolean ): CodeFragment = {
     val code = t match {
-      case Void => "Unit"
-      case OnewayVoid => "Unit"
+      case Void => "Void"
+      case OnewayVoid => "Void"
       case TBool => "Boolean"
       case TByte => "Byte"
       case TI16 => "Short"
@@ -242,39 +251,31 @@ class ScalaGenerator(
       case TString => "String"
       case TBinary => "ByteBuffer"
       case MapType(k, v, _) =>
-        (if (mutable) "mutable." else "") + "Map[" + genType(k).toData + ", " + genType(v).toData + "]"
+        "Map[" + genType(k, namespace, mutable).toData + ", " + genType(v, namespace, mutable).toData+ "]"
       case SetType(x, _) =>
-        (if (mutable) "mutable." else "") + "Set[" + genType(x).toData + "]"
+       "Set[" + genType(x, namespace, mutable).toData + "]"
       case ListType(x, _) =>
-        (if (mutable) "mutable.Buffer" else "Seq") + "[" + genType(x).toData + "]"
-      case n: NamedType => genID(qualifyNamedType(n).toTitleCase).toData
+       "List[" + genType(x, namespace, mutable).toData + "]"
+      case n: NamedType => genLinksForNamedTypes(namespace, t)
       case r: ReferenceType =>
         throw new ScroogeInternalException("ReferenceType should not appear in backend")
     }
     codify(code)
   }
 
-  def genPrimitiveType(t: FunctionType, mutable: Boolean = false): CodeFragment = genType(t,None, mutable)
+  def genPrimitiveType(t: FunctionType, mutable: Boolean = false): CodeFragment = genType(t, None,mutable)
 
-  def genFieldType(f: Field, namespace: Option[Identifier] = None, mutable: Boolean = false): CodeFragment = {
+  def genFieldType(f: Field, namespace: Option[Identifier], mutable: Boolean = false): CodeFragment = {
     val baseType = genType(f.fieldType, namespace, mutable).toData
-    val code = if (f.requiredness.isOptional) {
-      "Option[" + baseType + "]"
-    } else {
-      baseType
-    }
-    codify(code)
+    codify(baseType)
   }
 
-  def genFieldParams(fields: Seq[Field], namespace: Option[Identifier] = None, asVal: Boolean = false): CodeFragment = {
+  def genFieldParams(fields: Seq[Field], namespace: Option[Identifier], asVal: Boolean = false): CodeFragment = {
     val code = fields.map {
       f =>
         val valPrefix = if (asVal) "val " else ""
-        val nameAndType = genID(f.sid).toData + ": " + genFieldType(f).toData
-        val defaultValue = genDefaultFieldValue(f) map {
-          " = " + _.toData
-        }
-        valPrefix + nameAndType + defaultValue.getOrElse("")
+        val nameAndType = genFieldType(f, namespace).toData + " " + genID(f.sid).toData
+        valPrefix + nameAndType
     }.mkString(", ")
     codify(code)
   }
@@ -288,20 +289,24 @@ class ScalaGenerator(
     genID(Identifier(getServiceParentID(p).fullName + "$FinagleClient"))
 
   override def finagleClientFile(
-    packageDir: File,
-    service: Service, options:
-    Set[ServiceOption]
-  ): Option[File] =
-    options.find(_ == WithFinagle) map { _ =>
-      new File(packageDir, service.sid.toTitleCase.name + "$FinagleClient" + fileExtension)
+                                  packageDir: File,
+                                  service: Service, options:
+  Set[ServiceOption]
+                                  ): Option[File] =
+    options.find(_ == WithFinagle) map {
+      _ =>
+        new File(packageDir, service.sid.toTitleCase.name + "$FinagleClient" + fileExtension)
     }
 
   override def finagleServiceFile(
-    packageDir: File,
-    service: Service, options:
-    Set[ServiceOption]
-  ): Option[File] =
-    options.find(_ == WithFinagle) map { _ =>
-      new File(packageDir, service.sid.toTitleCase.name + "$FinagleService" + fileExtension)
+                                   packageDir: File,
+                                   service: Service, options:
+  Set[ServiceOption]
+                                   ): Option[File] =
+    options.find(_ == WithFinagle) map {
+      _ =>
+        new File(packageDir, service.sid.toTitleCase.name + "$FinagleService" + fileExtension)
     }
+
+
 }

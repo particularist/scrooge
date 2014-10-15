@@ -42,8 +42,9 @@ case class Field(
   default: Option[RHS] = None,
   requiredness: Requiredness = Requiredness.Default,
   typeAnnotations: Map[String, String] = Map.empty,
-  fieldAnnotations: Map[String, String] = Map.empty
-) extends Node
+  fieldAnnotations: Map[String, String] = Map.empty,
+  comment: Option[String] = None
+  ) extends Node
 
 case class Function(
   funcName: SimpleID,

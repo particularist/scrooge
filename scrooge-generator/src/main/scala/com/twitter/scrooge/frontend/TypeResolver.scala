@@ -191,6 +191,8 @@ case class TypeResolver(
       }
     case m @ MapRHS(elems) =>
       fieldType match {
+        case SetType(eltType, _) => SetRHS(Set())
+        case ListType(eltType, _) => ListRHS(List())
         case MapType(keyType, valType, _) =>
           m.copy(elems = elems.map { case (k, v) => (apply(k, keyType), apply(v, valType)) })
         case st @ StructType(s, _) if allowStructRHS =>

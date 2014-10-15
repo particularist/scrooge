@@ -1,0 +1,30 @@
+<html>
+<head>
+    <title>{{StructName}}</title>
+    <link rel="stylesheet" type="text/css"
+          href="stylesheet.css"
+          title="Style">
+</head>
+
+<body>
+<div class="definition"><h3>Enum: {{EnumName}}</h3>
+    <br>{{docstring}}<br>
+    <table id="Request" border="1" width="100%" cellpadding="3" cellspacing="0">
+        <tbody>
+        <tr class="TableHeadingColor">
+            <th>Description</th>
+            <th>Name</th>
+            <th>Value</th>
+        </tr>
+        {{#values}}
+        <tr>
+            <td><code>{{valuedocstring}}</code></td>
+            <td><code>{{name}}</code></td>
+            <td><code>{{value}}</code></td>
+        </tr>
+        {{/values}}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

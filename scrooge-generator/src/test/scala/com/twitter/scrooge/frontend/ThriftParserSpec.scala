@@ -1,6 +1,5 @@
 package com.twitter.scrooge.frontend
 
-import com.twitter.scrooge._
 import com.twitter.scrooge.ast._
 import com.twitter.scrooge.testutil.Spec
 
@@ -78,7 +77,7 @@ class ThriftParserSpec extends Spec {
         parser.function) must be(
         Function(SimpleID("get_tables"), "get_tables", ListType(TString, None), Seq(
           Field(-1, SimpleID("id"), "id", TI32, None, Requiredness.Optional),
-          Field(3, SimpleID("name"), "name", TString, Some(StringLiteral("cat")), Requiredness.Required)
+          Field(3, SimpleID("name"), "name", TString, Some(StringLiteral("cat")), Requiredness.Required, comment= Some("/**DOC*/"))
         ), Seq(Field(1, SimpleID("ex"), "ex", ReferenceType(Identifier("Exception")), None, Requiredness.Default)), None))
     }
 
@@ -159,14 +158,16 @@ enum Foo
           /** comments*/
           2: double y
           3: Color color = BLUE
+          // single line comment after fields
         } (
           annotation="supported",
           multiline="also supported",
         )
+        // test
                  """
       parser.parse(code, parser.definition) must be(Struct(SimpleID("Point"), "Point", Seq(
         Field(1, SimpleID("x"), "x", TDouble, None, Requiredness.Default),
-        Field(2, SimpleID("y"), "y", TDouble, None, Requiredness.Default),
+        Field(2, SimpleID("y"), "y", TDouble, None, Requiredness.Default, comment = Some("/** comments*/")),
         Field(3, SimpleID("color"), "color", ReferenceType(Identifier("Color")), Some(IdRHS(SimpleID("BLUE"))), Requiredness.Default)
       ), Some("/** docs up here */"), Map("annotation" -> "supported", "multiline" -> "also supported")))
     }
@@ -185,7 +186,7 @@ enum Foo
                    """
         parser.parse(code, parser.definition) must be(Union(SimpleID("Aircraft"), "Aircraft", Seq(
           Field(1, SimpleID("a"), "a", ReferenceType(Identifier("Airplane")), None, Requiredness.Default),
-          Field(2, SimpleID("r"), "r", ReferenceType(Identifier("Rotorcraft")), None, Requiredness.Default),
+          Field(2, SimpleID("r"), "r", ReferenceType(Identifier("Rotorcraft")), None, Requiredness.Default, comment = Some("/** comments*/")),
           Field(3, SimpleID("g"), "g", ReferenceType(Identifier("Glider")), None, Requiredness.Default),
           Field(4, SimpleID("lta"), "lta", ReferenceType(Identifier("LighterThanAir")), None, Requiredness.Default)
         ), Some("/** docs up here */"), Map("maxTypes" -> "4")))

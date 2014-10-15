@@ -1,0 +1,27 @@
+<html>
+<head>
+    <title>{{ServiceName}}</title>
+    <link rel="stylesheet" type="text/css"
+          href="stylesheet.css"
+          title="Style">
+
+    <script src="http://code.jquery.com/jquery-2.1.0.min.js"></script>
+</head>
+<body style="background-color: white;">
+<h1>Service: {{ServiceName}}</h1>
+<table border="1" width="100%" cellpadding="3" cellspacing="0">
+    <tbody>
+    <th class="TableHeadingColor" colspan="2">
+        Transaction Summary
+    </th>
+    {{#genericFunctions}}
+< HEAD
+    <tr>
+        <td colspan="2">
+            {{>function}}
+        </td>
+    </tr>
+    {{/genericFunctions}}
+    </tbody>
+</table>
+</body>

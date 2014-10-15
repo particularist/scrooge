@@ -225,10 +225,10 @@ class ThriftParser(
 
   // fields
 
-  lazy val field = (opt(comments) ~> opt(fieldId) ~ fieldReq) ~
+  lazy val field = (opt(comments) ~ opt(fieldId) ~ fieldReq) ~
     (fieldType ~ defaultedAnnotations ~ simpleID) ~
     opt("=" ~> rhs) ~ defaultedAnnotations <~ opt(listSeparator) ^^ {
-      case (fid ~ req) ~ (ftype ~ typeAnnotations ~ sid) ~ value ~ fieldAnnotations => {
+    case (comment ~ fid ~ req) ~ (ftype ~ typeAnnotations ~ sid) ~ value ~ fieldAnnotations => {
         val transformedVal = ftype match {
           case TBool => value map {
             case IntLiteral(0) => BoolLiteral(false)
@@ -248,8 +248,9 @@ class ThriftParser(
           transformedVal,
           transformedReq,
           typeAnnotations,
-          fieldAnnotations
-        )
+        fieldAnnotations,
+        comment
+      )
     }
   }
 
@@ -326,19 +327,19 @@ class ThriftParser(
   }
 
   def structLike(keyword: String) =
-    (opt(comments) ~ ((keyword ~> simpleID) <~ "{")) ~ rep(field) ~ ("}" ~> defaultedAnnotations)
+    (opt(comments) ~ ((keyword ~> simpleID) <~ "{")) ~ rep(field) ~ opt(comments) ~ ("}" ~> defaultedAnnotations)
 
-  lazy val struct = structLike("struct") ^^ {
-    case comment ~ sid ~ fields ~ annotations =>
+  lazy val struct = structLike("struct") <~ opt(comments) ^^ {
+    case comment ~ sid ~ fields ~ comments ~ annotations =>
       Struct(sid, sid.name, fixFieldIds(fields), comment, annotations)
   }
 
   private[this] val disallowedUnionFieldNames = Set("unknown_union_field", "unknownunionfield") map { _.toLowerCase }
 
   lazy val union = structLike("union") ^^ {
-    case comment ~ sid ~ fields ~ annotations =>
+    case comment ~ sid ~ fields ~ comments ~ annotations =>
       val fields0 = fields.map {
-        case f @ Field(_, _, _, _, _, r, _, _) if r == Requiredness.Default =>
+        case f @ Field(_, _, _, _, _, r, _, _, _) if r == Requiredness.Default =>
           if (disallowedUnionFieldNames.contains(f.sid.name.toLowerCase)) {
             throw new UnionFieldInvalidNameException(sid.name, f.sid.name)
           } else f
@@ -369,7 +370,7 @@ class ThriftParser(
 
   // document
 
-  lazy val document: Parser[Document] = rep(header) ~ rep(definition) <~ opt(comments) ^^ {
+  lazy val document: Parser[Document] = rep(header) ~ rep(definition) <~ opt(comments) ~ opt(whiteSpace)^^ {
     case hs ~ ds => Document(hs, ds)
   }
 
