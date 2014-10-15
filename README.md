@@ -1,5 +1,5 @@
 # Scrooge
-[![Build Status](https://secure.travis-ci.org/twitter/scrooge.png)](https://travis-ci.org/twitter/scrooge)
+[![Build Status](https://secure.travis-ci.org/particularist/scrooge.png)](https://travis-ci.org/particularist/scrooge)
 
 Scrooge is a [thrift](https://thrift.apache.org/) code generator written in
 Scala, which currently generates code for Scala and Java.
