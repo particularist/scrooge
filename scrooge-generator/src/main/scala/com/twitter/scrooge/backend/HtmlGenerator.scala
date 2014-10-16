@@ -108,7 +108,7 @@ class HtmlGenerator(
     }
   // methods that convert AST nodes to CodeFragment
   override def genID(data: Identifier): CodeFragment = data match {
-    case SimpleID(name) => codify(quoteKeyword(name) )
+    case SimpleID(name, _) => codify(quoteKeyword(name) )
     case QualifiedID(names) => codify(names.map { quoteKeyword(_) }.mkString("/"))
   }
 
@@ -142,6 +142,10 @@ class HtmlGenerator(
     }
     genID(enum.value.sid.toTitleCase.addScope(getTypeId.toTitleCase))
   }
+
+  // TODO
+  def genStruct(struct: StructRHS): CodeFragment =
+    throw new Exception("not implemented")
 
   override def genDefaultValue(fieldType: FieldType, mutable: Boolean = false): CodeFragment = {
     val code = fieldType match {

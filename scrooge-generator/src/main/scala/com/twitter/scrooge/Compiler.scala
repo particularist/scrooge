@@ -87,15 +87,6 @@ class Compiler {
         dryRun
       ).map { _.getPath }
 
-      if(language == "html"){
-        val source = Source.fromInputStream(getClass.getResourceAsStream("/htmlgen/stylesheet.css")).mkString;
-        val writer = new FileWriter(destFolder + "/stylesheet.css")
-        try {
-          writer.write(source)
-        } finally {
-          writer.close()
-        }
-      }
 
       if (verbose) {
         println("+ Generated %s".format(generatedFiles.mkString(", ")))
