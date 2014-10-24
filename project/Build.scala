@@ -1,5 +1,6 @@
 import sbt._
 import Keys._
+import aether.Aether._
 import bintray.Plugin._
 import bintray.Keys._
 import com.typesafe.sbt.SbtSite.site
@@ -9,7 +10,7 @@ import sbtassembly.Plugin._
 import AssemblyKeys._
 
 object Scrooge extends Build {
-  val libVersion = "3.17.0"
+  val libVersion = "3.17.0-HTML-SNAPSHOT"
   val utilVersion = "6.22.0"
   val finagleVersion = "6.22.0"
 
@@ -70,7 +71,7 @@ object Scrooge extends Build {
 
   val sharedSettings = Seq(
     version := libVersion,
-    organization := "com.twitter",
+    organization := "com.particularist",
     crossScalaVersions := Seq("2.10.4"),
     scalaVersion := "2.10.4",
 
@@ -78,35 +79,21 @@ object Scrooge extends Build {
       "sonatype-public" at "https://oss.sonatype.org/content/groups/public"
     ),
 
-    publishM2Configuration <<= (packagedArtifacts, checksums in publish, ivyLoggingLevel) map { (arts, cs, level) =>
-      Classpaths.publishConfig(
-        artifacts = arts,
-        ivyFile = None,
-        resolverName = m2Repo.name,
-        checksums = cs,
-        logging = level,
-        overwrite = true)
-    },
-    publishM2 <<= Classpaths.publishTask(publishM2Configuration, deliverLocal),
     otherResolvers += m2Repo,
 
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "2.2.2" % "test",
       "junit" % "junit" % "4.10" % "test" exclude("org.mockito", "mockito-all")
     ),
-    resolvers += "twitter-repo" at "http://maven.twttr.com",
 
     scalacOptions ++= Seq("-encoding", "utf8"),
     scalacOptions += "-deprecation",
     javacOptions ++= Seq("-source", "1.6", "-target", "1.6", "-Xlint:unchecked"),
     javacOptions in doc := Seq("-source", "1.6"),
 
-    // Sonatype publishing
-    publishArtifact in Test := false,
-    pomIncludeRepository := { _ => false },
-    publishMavenStyle := true,
+    credentials += Credentials(Path.userHome / ".sbt" / ".credentials"),
     pomExtra := (
-      <url>https://github.com/twitter/scrooge</url>
+      <url>https://github.com/partiucularist/scrooge</url>
       <licenses>
         <license>
           <name>Apache License, Version 2.0</name>
@@ -114,27 +101,20 @@ object Scrooge extends Build {
         </license>
       </licenses>
       <scm>
-        <url>git@github.com:twitter/scrooge.git</url>
+        <url>git@github.com:particularist/scrooge.git</url>
         <connection>scm:git:git@github.com:twitter/scrooge.git</connection>
-      </scm>
-      <developers>
-        <developer>
-          <id>twitter</id>
-          <name>Twitter Inc.</name>
-          <url>https://www.twitter.com/</url>
-        </developer>
-      </developers>),
+      </scm>),
     publishTo <<= version { (v: String) =>
-      val nexus = "https://oss.sonatype.org/"
-      if (v.trim.endsWith("SNAPSHOT"))
-        Some("snapshots" at nexus + "content/repositories/snapshots")
-      else
-        Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+      if (v.trim.endsWith("SNAPSHOT")) {
+        Some("Sonatype Nexus Snapshots" at "http://nexus-particularist.rhcloud.com/nexus/content/repositories/particularist-snapshots/")
+      } else {
+        Some("Sonatype Nexus Staging" at "http://nexus-particularist.rhcloud.com/nexus/content/repositories/particularist-releases/")
+      }
     },
 
     resourceGenerators in Compile <+=
       (resourceManaged in Compile, name, version) map { (dir, name, ver) =>
-        val file = dir / "com" / "twitter" / name / "build.properties"
+        val file = dir / "com" / "particularist" / name / "build.properties"
         val buildRev = Process("git" :: "rev-parse" :: "HEAD" :: Nil).!!.trim
         val buildName = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss").format(new java.util.Date)
         val contents = (
@@ -143,7 +123,11 @@ object Scrooge extends Build {
         IO.write(file, contents)
         Seq(file)
       }
+<<<<<<< HEAD
   ) ++ graphSettings
+=======
+  ) ++ aetherSettings
+>>>>>>> Deploying to particularist repo and changing the group id.
 
   val jmockSettings = Seq(
     libraryDependencies ++= Seq(
