@@ -86,6 +86,7 @@ object Scrooge extends Build {
       "junit" % "junit" % "4.10" % "test" exclude("org.mockito", "mockito-all")
     ),
 
+    resolvers += "twitter-repo" at "http://maven.twttr.com",
     scalacOptions ++= Seq("-encoding", "utf8"),
     scalacOptions += "-deprecation",
     javacOptions ++= Seq("-source", "1.6", "-target", "1.6", "-Xlint:unchecked"),
