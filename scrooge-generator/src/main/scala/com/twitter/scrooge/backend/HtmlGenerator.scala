@@ -20,23 +20,26 @@ import com.twitter.scrooge.ast._
 import com.twitter.scrooge.frontend.{ScroogeInternalException, ResolvedDocument}
 import com.twitter.scrooge.mustache.Dictionary._
 import java.io.File
+import com.twitter.scrooge.mustache.HandlebarLoader
 import org.apache.commons.lang.StringEscapeUtils.escapeHtml
 
 object HtmlGeneratorFactory extends GeneratorFactory {
   val lang = "html"
-
+  val handlebarLoader = new HandlebarLoader("/javagen/", ".java")
   def apply(
              includeMap: Map[String, ResolvedDocument],
              defaultNamespace: String,
              experimentFlags: Seq[String]
-             ): ThriftGenerator = new HtmlGenerator(includeMap, defaultNamespace, experimentFlags)
+             ): ThriftGenerator = new HtmlGenerator(includeMap, defaultNamespace, experimentFlags, handlebarLoader)
 }
 
 class HtmlGenerator(
                      val includeMap: Map[String, ResolvedDocument],
                      val defaultNamespace: String,
-                     val experimentFlags: Seq[String]
-                     ) extends Generator with ThriftGenerator {
+                     val experimentFlags: Seq[String],
+                     val templatesLoader: HandlebarLoader
+                     ) extends TemplateGenerator{
+  def templates: HandlebarLoader = templatesLoader
 
   val fileExtension = ".html"
   val templateDirName = "/htmlgen/"

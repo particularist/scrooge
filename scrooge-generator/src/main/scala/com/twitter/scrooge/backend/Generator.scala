@@ -16,15 +16,15 @@ package com.twitter.scrooge.backend
  * limitations under the License.
  */
 
-import java.io.{OutputStreamWriter, FileOutputStream, File}
-import scala.collection.mutable
-import com.twitter.scrooge.mustache.HandlebarLoader
-import com.twitter.scrooge.ast._
-import com.twitter.scrooge.mustache.Dictionary
-import com.twitter.scrooge.java_generator.ApacheJavaGeneratorFactory
-import scala.collection.JavaConverters._
-import com.twitter.scrooge.frontend.{ScroogeInternalException, ResolvedDocument}
+import java.io.{File, FileOutputStream, OutputStreamWriter}
+
 import com.twitter.finagle.util.LoadService
+import com.twitter.scrooge.ast._
+import com.twitter.scrooge.frontend.{ResolvedDocument, ScroogeInternalException}
+import com.twitter.scrooge.java_generator.ApacheJavaGeneratorFactory
+import com.twitter.scrooge.mustache.HandlebarLoader
+
+import scala.collection.mutable
 
 abstract sealed class ServiceOption
 
@@ -72,7 +72,7 @@ trait GeneratorFactory {
 }
 
 trait Generator extends ThriftGenerator {
-  import Dictionary._
+  import com.twitter.scrooge.mustache.Dictionary._
 
   /**
    * Map from included file names to the namespaces defined in those files.
@@ -82,11 +82,7 @@ trait Generator extends ThriftGenerator {
   val experimentFlags: Seq[String]
 
   /******************** helper functions ************************/
-<<<<<<< HEAD
   protected def namespacedFolder(destFolder: File, namespace: String, dryRun: Boolean): File = {
-    val file = new File(destFolder, namespace.replace('.', File.separatorChar))
-=======
-  private[this] def namespacedFolder(destFolder: File, namespace: String, dryRun: Boolean) = {
 
     var file : File = null
     if(this.isInstanceOf[HtmlGenerator]) {
@@ -94,7 +90,6 @@ trait Generator extends ThriftGenerator {
     } else {
       file = new File(destFolder, namespace.replace('.', File.separatorChar))
     }
->>>>>>> Added an html generator and included html template files.
     if (!dryRun) file.mkdirs()
     file
   }
