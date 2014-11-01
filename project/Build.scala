@@ -71,7 +71,7 @@ object Scrooge extends Build {
 
   val sharedSettings = Seq(
     version := libVersion,
-    organization := "com.particularist",
+    organization := "com.twitter",
     crossScalaVersions := Seq("2.10.4"),
     scalaVersion := "2.10.4",
 
@@ -115,7 +115,7 @@ object Scrooge extends Build {
 
     resourceGenerators in Compile <+=
       (resourceManaged in Compile, name, version) map { (dir, name, ver) =>
-        val file = dir / "com" / "particularist" / name / "build.properties"
+        val file = dir / "com" / "twitter" / name / "build.properties"
         val buildRev = Process("git" :: "rev-parse" :: "HEAD" :: Nil).!!.trim
         val buildName = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss").format(new java.util.Date)
         val contents = (
@@ -124,11 +124,7 @@ object Scrooge extends Build {
         IO.write(file, contents)
         Seq(file)
       }
-<<<<<<< HEAD
-  ) ++ graphSettings
-=======
-  ) ++ aetherSettings
->>>>>>> Deploying to particularist repo and changing the group id.
+  ) ++ graphSettings ++ aetherSettings
 
   val jmockSettings = Seq(
     libraryDependencies ++= Seq(
