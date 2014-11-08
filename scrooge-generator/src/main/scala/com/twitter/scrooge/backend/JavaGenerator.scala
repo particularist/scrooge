@@ -119,8 +119,8 @@ class JavaGenerator(
 
   def genEnum(enum: EnumRHS, fieldType: Option[FieldType] = None): CodeFragment = {
     def getTypeId: Identifier = fieldType.getOrElse(Void) match {
-      case n: NamedType => qualifyNamedType(n)
-      case _ =>  enum.enum.sid
+      case n: NamedType => qualifyNamedType(n, true)
+      case _ => enum.enum.sid
     }
     genID(enum.value.sid.toUpperCase.addScope(getTypeId.toTitleCase))
   }
@@ -197,6 +197,14 @@ class JavaGenerator(
     codify(code)
   }
 
+  override def genConstant(constant: RHS, mutable: Boolean = false, fieldType: Option[FieldType] = None): CodeFragment = {
+    (constant, fieldType) match {
+      case (IntLiteral(value), Some(TI64)) => codify(value.toString + "L")
+      case _ => super.genConstant(constant, mutable, fieldType)
+    }
+  }
+
+
   def genType(t: FunctionType, namespace: Option[Identifier] = None, mutable: Boolean = false): CodeFragment = {
     val code = t match {
       case Void => "Void"
@@ -212,7 +220,7 @@ class JavaGenerator(
       case MapType(k, v, _) => "Map<" + genType(k).toData + ", " + genType(v).toData + ">"
       case SetType(x, _) => "Set<" + genType(x).toData + ">"
       case ListType(x, _) => "List<" + genType(x).toData + ">"
-      case n: NamedType => genID(qualifyNamedType(n).toTitleCase).toData
+      case n: NamedType => genID(qualifyNamedType(n, true).toTitleCase).toData
       case r: ReferenceType =>
         throw new ScroogeInternalException("ReferenceType should not appear in backend")
     }

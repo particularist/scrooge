@@ -140,7 +140,7 @@ class ScalaGenerator(
 
   def genEnum(enum: EnumRHS, fieldType: Option[FieldType] = None): CodeFragment = {
     def getTypeId: Identifier = fieldType.getOrElse(Void) match {
-      case n: NamedType => qualifyNamedType(n)
+      case n: NamedType => qualifyNamedType(n, true)
       case _ =>  enum.enum.sid
     }
     genID(enum.value.sid.toTitleCase.addScope(getTypeId.toTitleCase))
@@ -247,7 +247,7 @@ class ScalaGenerator(
         (if (mutable) "mutable." else "") + "Set[" + genType(x).toData + "]"
       case ListType(x, _) =>
         (if (mutable) "mutable.Buffer" else "Seq") + "[" + genType(x).toData + "]"
-      case n: NamedType => genID(qualifyNamedType(n).toTitleCase).toData
+      case n: NamedType => genID(qualifyNamedType(n, true).toTitleCase).toData
       case r: ReferenceType =>
         throw new ScroogeInternalException("ReferenceType should not appear in backend")
     }
