@@ -6,5 +6,15 @@ jdk:
   - oraclejdk7
   - openjdk6
   - openjdk7
-
-script: "./sbt ++$TRAVIS_SCALA_VERSION test"
+env:
+  global:
+  - secure: ggewvJUTV1geqhQbzzxz9sQJGY1+e527YeXAyl3kyRHSKnvyfATAPPDWpXqWMdEj9ww8mHPQzDCLu1Th5aL0RoZ0k6z9JFASE2NrJVAvacXc+jzBw4Mm9m2pqfUa0LMeMS+kjOyV74/7E/Vd4FnMoXZ/BZYUEplz7OlGki/BMp4=
+  - secure: Aos9NTzjrFhRoGfZoTxtW12P17m43y5RTxKgNBJ/hUb42zrnqmJ84h1vGxwwKgPDoelBgeHvriJ0tVhp7xlMvKJeMY0xuY9XHW9bju0tFnwu7RpdHEUCRJvV8V2qDUjkfmezt17u9NhGc5rK9M7w2Aqu6V9F30UfJ5Lcs2Mp2oQ=
+  - secure: CmIEVzFyMYsW57Wat4M/76lEhVSZokifiWPZc9GOvfPJCMIXzqPr+oZNkJJDmvbGPmBd+w5wlcKkHSzADXSo3RCVvucy0ZpTWqqF1E5g6o773mIylb3zXPI+BvY5Kei1hRZ19RW6IWnyOCilJQHn8icPJyctwe43MvBoM1UZV1Q=
+branches:
+  only:
+  - html-particularist
+script: ./sbt ++$TRAVIS_SCALA_VERSION test
+after_success:
+  - python addServer.py
+  - ./sbt aetherPublish
