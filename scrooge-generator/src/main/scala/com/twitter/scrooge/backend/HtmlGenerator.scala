@@ -25,7 +25,7 @@ import org.apache.commons.lang.StringEscapeUtils.escapeHtml
 
 object HtmlGeneratorFactory extends GeneratorFactory {
   val lang = "html"
-  val handlebarLoader = new HandlebarLoader("/javagen/", ".java")
+  val handlebarLoader = new HandlebarLoader("/htmlgen/", ".html")
   def apply(
              includeMap: Map[String, ResolvedDocument],
              defaultNamespace: String,
