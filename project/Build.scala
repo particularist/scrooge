@@ -124,7 +124,7 @@ object Scrooge extends Build {
         IO.write(file, contents)
         Seq(file)
       }
-  ) ++ graphSettings ++ aetherSettings
+  ) ++ graphSettings ++ aetherPublishBothSettings
 
   val jmockSettings = Seq(
     libraryDependencies ++= Seq(

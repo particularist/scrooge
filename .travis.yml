@@ -16,5 +16,5 @@ branches:
   - html-particularist
 script: ./sbt ++$TRAVIS_SCALA_VERSION test
 after_success:
-  - python addServer.py
-  - ./sbt aetherPublish
+  - python project/addServer.py
+  - ./sbt publish
