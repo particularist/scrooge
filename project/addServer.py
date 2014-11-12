@@ -2,6 +2,7 @@
 import sys
 import os
 import os.path
+
 if os.environ["TRAVIS_SECURE_ENV_VARS"] == "false":
   print "no secure env vars available, skipping deployment"
   sys.exit()
@@ -13,5 +14,5 @@ user = os.environ["SONATYPE_USERNAME"]
 password = os.environ["SONATYPE_PASSWORD"]
 
 f = open(homedir + '/.sbt/.credentials', 'w')
-f.write("host="+host+"\nuser="+user+"\npass="+password+"\n")
+f.write("realm=X\n"+"host="+host+"\nuser="+user+"\npass="+password+"\n")
 f.close()
