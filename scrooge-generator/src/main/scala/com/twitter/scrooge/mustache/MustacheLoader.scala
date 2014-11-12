@@ -48,7 +48,7 @@ class HandlebarLoader(prefix: String, suffix: String = ".scala") {
 
   val header = {
     val p = new Properties
-    val resource = getClass.getResource("/com/twitter/scrooge-generator/build.properties")
+    val resource = getClass.getResource("/com/particularist/scrooge-generator/build.properties")
     if (resource == null)
       Logger.getLogger("scrooge-generator").log(Level.WARNING, "Scrooge's build.properties not found")
     else
