@@ -246,14 +246,8 @@ class ThriftParser(
   lazy val field = (opt(comments) ~ opt(fieldId) ~ fieldReq) ~
     (fieldType ~ defaultedAnnotations ~ simpleID) ~
     opt("=" ~> rhs) ~ defaultedAnnotations <~ opt(listSeparator) ^^ {
-    case (comment ~ fid ~ req) ~ (ftype ~ typeAnnotations ~ sid) ~ value ~ fieldAnnotations => {
-        val transformedVal = ftype match {
-          case TBool => value map {
-            case IntLiteral(0) => BoolLiteral(false)
-            case _ => BoolLiteral(true)
-          }
-          case _ => value
-        }
+      case (comment ~ fid ~ req) ~ (ftype ~ typeAnnotations ~ sid) ~ value ~ fieldAnnotations => {
+        val transformedVal = value.map(convertRhs(ftype, _))
 
         // if field is marked optional and a default is defined, ignore the optional part.
         val transformedReq = if (!defaultOptional && transformedVal.isDefined && req.isOptional) Requiredness.Default else req
@@ -266,9 +260,9 @@ class ThriftParser(
           transformedVal,
           transformedReq,
           typeAnnotations,
-        fieldAnnotations,
-        comment
-      )
+          fieldAnnotations,
+          comment
+        )
     }
   }
 
